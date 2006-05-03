@@ -107,6 +107,7 @@ Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
 for i = 1:5
+	startmatlabpool;
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
 	tic;				%计时
@@ -154,7 +155,6 @@ for i = 1:5
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	startmatlabpool;
 	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Ps_avai_Num) ;	%决策变量索引
@@ -176,7 +176,7 @@ for i = 1:5
 		Com_Consum = 0;		%压缩机能耗
 		%单个时间段内可能存在多个时步，需要进行多次模拟
 		for l = 1:TimeSteps_Per_Sec
-			Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
+			Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/TimeSteps_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
 			tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
 			x0 = zeros(2*SpaceSteps,1);	%准备初值
 			x0(1) = MassFlux(1);
@@ -198,7 +198,7 @@ for i = 1:5
 			MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
 
 			%计算压缩机能耗
-			if Pressure(SpaceSteps+1) < Pe_min
+			if Pressure(SpaceSteps+1) < Pe_min || min(MassFlux) < 0
 				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
 				Com_Consum = 0;
 			else
