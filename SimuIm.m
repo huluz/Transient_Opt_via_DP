@@ -34,7 +34,7 @@ Ps = 7.3E6*ones(TimeSteps_Total,1);		%管段起点压力
 Qs = zeros(TimeSteps_Total,1);		%起点流量
 Mss = zeros(TimeSteps_Total,1);		%起点质量流量密度
 Pe = zeros(TimeSteps_Total,1);		%终点压力
-Qbasic = 65;           		 %流量基数
+Qbasic = 65;           		 		%流量基数
 Ff = [0.2;0.15;0.1;0.25;0.35;0.58;1.2;1.3;1;0.97;0.85;1.65;2;1;0.8;0.65;...
     1.15;1.9;2.8;2.2;1.2;0.85;0.5;0.35];    		%小时流量不均匀系数
 Qe = zeros(TimeSteps_Total,1);         		%终点流量
@@ -59,59 +59,64 @@ while tl>0              		%稳态模拟
 end
 MassFlux = Den_sta*Qe(TimeSteps_Total)*ones(SpaceSteps+1,1);	%构造初始条件-质量流量密度
 Pressure = Pressure';		%压力
-figure(1);
-plot(Pressure);
-title('Pressure');
-figure(1);
-plot(MassFlux);
-title('MassFlux');
+%figure(1);
+%plot(Pressure);
+%title('Pressure');
+%figure(2);
+%plot(MassFlux);
+%title('MassFlux');
 
 %瞬态模拟
-
-%第一时步
-%构造管流控制方程组
-tf{1} = @(x)((alpha*Ps(1)/(1+beta*Ps(1))+alpha*x(2)/(1+beta*x(2))-alpha*Pressure(1)/(1+beta*Pressure(1))-alpha*Pressure(2)/(1+beta*Pressure(2)))/2/dt + (Mse(1)+MassFlux(2)-x(1)-MassFlux(1))/2/dx);
-tf{2} = @(x)((x(1)+x(3)-MassFlux(1)-MassFlux(2))/2/dt +((x(3)^2)*(1+beta*x(2))/alpha/x(2)+x(2)+(MassFlux(2)^2)*(1+beta*Pressure(2))/alpha/Pressure(2)+Pressure(2)-(x(1)^2)*(1+beta*Ps(1))/alpha/Ps(1)-Ps(1)-(MassFlux(1)^2)*(1+beta*Pressure(1))/alpha/Pressure(1)-Pressure(1))/2/dx + lamda*((x(1)^2)*(1+beta*Ps(1))/alpha/Ps(1)+(x(3)^2)*(1+beta*x(2))/alpha/x(2)+(MassFlux(1)^2)*(1+beta*Pressure(1))/alpha/Pressure(1)+(MassFlux(2)^2)*(1+beta*Pressure(2))/alpha/Pressure(2))/8/Din);
-for i = 2:SpaceSteps-1 
-	tf{2*i-1} = @(x)((alpha*x(2*i)/(1+beta*x(2*i-2))+alpha*x(2*i)/(1+beta*x(2*i))-alpha*Pressure(i)/(1+beta*Pressure(i))-alpha*Pressure(i+1)/(1+beta*Pressure(i+1)))/2/dt + (x(2*i+1)+MassFlux(i+1)-x(2*i-1)-MassFlux(i))/2/dx);
-	tf{2*i}  = @(x)((x(2*i-1)+x(2*i+1)-MassFlux(i)-MassFlux(i+1))/2/dt + ((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+x(2*i)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+Pressure(i+1)-(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)-x(2*i-2)-(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i)-Pressure(i))/2/dx + lamda*((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i))/8/Din);
-end
-tf{2*SpaceSteps-1} = @(x)((alpha*x(2*SpaceSteps-2)/(1+beta*x(2*SpaceSteps-2))+alpha*x(2*SpaceSteps)/(1+beta*x(2*SpaceSteps))-alpha*Pressure(SpaceSteps)/(1+beta*Pressure(SpaceSteps))-alpha*Pressure(SpaceSteps+1)/(1+Pressure(SpaceSteps+1)))/2/dt + (Mse(1)+MassFlux(SpaceSteps+1)-x(2*SpaceSteps-1)-MassFlux(SpaceSteps))/2/dx);
-tf{2*SpaceSteps} = @(x)(x(2*SpaceSteps-1)+Mse(1)-MassFlux(SpaceSteps)-MassFlux(SpaceSteps+1))/2/dt + ((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+Pressure(SpaceSteps+1)-(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)-x(2*SpaceSteps-2)-(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps)-Pressure(SpaceSteps-1))/2/dx + lamda*((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)+(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps))/8/Din;
-tf = tf';
-%tf = @(x)transfun(x,dt,Len,alpha,beta,lamda,Din,Ps_ini,Pe_ini,Mss_ini,Mse_ini,Ps(1),Mse(1));	%构造方程
-x0 = zeros(2*SpaceSteps);	%准备初值
-x0(1) = MassFlux(1);
-for i = 2:SpaceSteps
-	x0(2*i-2) = Pressure(i);
-	x0(2*i-1) = MassFlux(i);
-end
-x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
-%options = optimset('MaxFunEvals',1E4,'MaxIter',1E4,'Display','iter-detailed');
-results = fsolve(tf,x0);		%计算
-MassFlux(1) = results(1);	%归档计算结果
-for i = 2: SpaceSteps
-	Pressure(i) = results(2*i-2);
-	MassFlux(i) = results(2*i-1);
-end
-Pressure(SpaceSteps) = results(2*SpaceSteps);
-Pressure(1) = Ps(2);		%引入边界条件
-MassFlux(SpaceSteps+1) = Mse(2);
-
-%后续过程
-for i = 2:2
-	tf = @(x)transfun(x,dt,Len,alpha,beta,lamda,Din,Ps(i-1),Pe(i-1),Mss(i-1),Mse(i-1),Ps(i),Mse(i));	%构造方程
-	x0 = [Pe(i-1),Mss(i-1)];	%准备初值
-	results = fsolve(tf,x0);	%计算
-	Mss(i) = results(2);	%归档结果
-	Qs(i) = Mss(i) / Den_sta;
-	Pe(i) = results(1);
+for i = 1:TimeSteps_Total
+	%构造管流控制方程组
+	%tf{1} = @(x)((alpha*Ps(1)/(1+beta*Ps(1))+alpha*x(2)/(1+beta*x(2))-alpha*Pressure(1)/(1+beta*Pressure(1))-alpha*Pressure(2)/(1+beta*Pressure(2)))/2/dt + (Mse(1)+MassFlux(2)-x(1)-MassFlux(1))/2/dx);
+	%tf{2} = @(x)((x(1)+x(3)-MassFlux(1)-MassFlux(2))/2/dt +((x(3)^2)*(1+beta*x(2))/alpha/x(2)+x(2)+(MassFlux(2)^2)*(1+beta*Pressure(2))/alpha/Pressure(2)+Pressure(2)-(x(1)^2)*(1+beta*Ps(1))/alpha/Ps(1)-Ps(1)-(MassFlux(1)^2)*(1+beta*Pressure(1))/alpha/Pressure(1)-Pressure(1))/2/dx + lamda*((x(1)^2)*(1+beta*Ps(1))/alpha/Ps(1)+(x(3)^2)*(1+beta*x(2))/alpha/x(2)+(MassFlux(1)^2)*(1+beta*Pressure(1))/alpha/Pressure(1)+(MassFlux(2)^2)*(1+beta*Pressure(2))/alpha/Pressure(2))/8/Din);
+	%for i = 2:SpaceSteps-1 
+	%	tf{2*i-1} = @(x)((alpha*x(2*i)/(1+beta*x(2*i-2))+alpha*x(2*i)/(1+beta*x(2*i))-alpha*Pressure(i)/(1+beta*Pressure(i))-alpha*Pressure(i+1)/(1+beta*Pressure(i+1)))/2/dt + (x(2*i+1)+MassFlux(i+1)-x(2*i-1)-MassFlux(i))/2/dx);
+	%	tf{2*i}  = @(x)((x(2*i-1)+x(2*i+1)-MassFlux(i)-MassFlux(i+1))/2/dt + ((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+x(2*i)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+Pressure(i+1)-(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)-x(2*i-2)-(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i)-Pressure(i))/2/dx + lamda*((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i))/8/Din);
+	%end
+	%tf{2*SpaceSteps-1} = @(x)((alpha*x(2*SpaceSteps-2)/(1+beta*x(2*SpaceSteps-2))+alpha*x(2*SpaceSteps)/(1+beta*x(2*SpaceSteps))-alpha*Pressure(SpaceSteps)/(1+beta*Pressure(SpaceSteps))-alpha*Pressure(SpaceSteps+1)/(1+Pressure(SpaceSteps+1)))/2/dt + (Mse(1)+MassFlux(SpaceSteps+1)-x(2*SpaceSteps-1)-MassFlux(SpaceSteps))/2/dx);
+	%tf{2*SpaceSteps} = @(x)(x(2*SpaceSteps-1)+Mse(1)-MassFlux(SpaceSteps)-MassFlux(SpaceSteps+1))/2/dt + ((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+Pressure(SpaceSteps+1)-(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)-x(2*SpaceSteps-2)-(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps)-Pressure(SpaceSteps-1))/2/dx + lamda*((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)+(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps))/8/Din;
+	%tf = tf';
+	tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps(i),Mse(i));	%构造方程
+	x0 = zeros(2*SpaceSteps,1);	%准备初值
+	x0(1) = MassFlux(1);
+	for j = 2:SpaceSteps
+		x0(2*j-2) = Pressure(j);
+		x0(2*j-1) = MassFlux(j);
+	end
+	x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
+	%options = optimset('MaxFunEvals',1E4,'MaxIter',1E4,'Display','iter-detailed');
+	results = fsolve(tf,x0);		%计算
+	MassFlux(1) = results(1);	%归档计算结果
+	for j = 2: SpaceSteps
+		Pressure(j) = results(2*j-2);
+		MassFlux(j) = results(2*j-1);
+	end
+	Pressure(SpaceSteps+1) = results(2*SpaceSteps);
+	Mss(i) = results(1);		%管段起点质量流量
+	Pe(i) = results(2*SpaceSteps);	%管段终点压力
+	if i < TimeSteps_Total
+		Pressure(1) = Ps(i+1);		%引入边界条件
+		MassFlux(SpaceSteps+1) = Mse(i+1);
+	end
+	if mod(i,10) == 0
+		%计算过程图形化
+		figure(3);			%终点压力变化
+		plot(Pe(1:i));
+		title('Pressure at the Outlet');
+		Qs(1:i) = (1/Den_sta)*Mss(1:i);		%起点流量变化
+		figure(4);
+		plot(Qs(1:i));
+		title('Quantity as the Inlet');
+	end
 end
 
 %计算结果可视化
-figure(1);			%终点压力变化
+figure(3);			%终点压力变化
 plot(Pe);
-title('Pressure at the Outlet')
-figure(2);			%起点流量变化
+title('Pressure at the Outlet');
+Qs = (1/Den_sta)*Mss;		%起点流量变化
+figure(4);
 plot(Qs);
-title('Quantity as the Inlet')
+title('Quantity as the Inlet');
