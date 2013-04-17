@@ -20,10 +20,11 @@ beta = 0.257/PreC - 0.533*TempC/PreC/Temp; 	%AGA气体状态方程参数
 Len = 100E3;            		%管段长度
 lamda = 0.008;          		%摩阻系数
 Din = 0.6096;           		%管段内径
+Area = 0.25*pi*Din^2;		%管段横截面积
 C0 = 0.03848;           		%稳态模拟公式系数
 Time = 24*3600;		%模拟时长
 Time_Sec = 3600;		%单个时间段时长
-dt = 60;              		%时步
+dt = 120;              		%时步
 TimeSteps_Total = Time / dt; 	%总时步数
 TimeSteps_Per_Sec = Time_Sec / dt;		%每个时间段的步长数
 dx = 10E3;               		%空间步长
@@ -41,7 +42,7 @@ Qe = zeros(TimeSteps_Total,1);         		%终点流量
 for i = 1:Time/Time_Sec 			%根据时间点上的值设定整个时间段的流量
 	Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 end
-Mse = Den_sta * Qe;		%终点质量流量密度
+Mse = Den_sta * Qe/Area;			%终点质量流量密度
 
 %稳态模拟
 tl = Len;               		%管段长度
@@ -57,7 +58,7 @@ while tl>0              		%稳态模拟
     tl = tl - dx;
     Pls = Ple;
 end
-MassFlux = Den_sta*Qe(TimeSteps_Total)*ones(SpaceSteps+1,1);	%构造初始条件-质量流量密度
+MassFlux = (Den_sta*Qe(TimeSteps_Total)/Area)*ones(SpaceSteps+1,1);	%构造初始条件-质量流量密度
 Pressure = Pressure';		%压力
 %figure(1);
 %plot(Pressure);
@@ -87,7 +88,8 @@ for i = 1:TimeSteps_Total
 	end
 	x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
 	%options = optimset('MaxFunEvals',1E4,'MaxIter',1E4,'Display','iter-detailed');
-	results = fsolve(tf,x0);		%计算
+	options = optimset('Display','off');
+	results = fsolve(tf,x0,options);		%计算
 	MassFlux(1) = results(1);	%归档计算结果
 	for j = 2: SpaceSteps
 		Pressure(j) = results(2*j-2);
@@ -100,23 +102,23 @@ for i = 1:TimeSteps_Total
 		Pressure(1) = Ps(i+1);		%引入边界条件
 		MassFlux(SpaceSteps+1) = Mse(i+1);
 	end
-	if mod(i,10) == 0
-		%计算过程图形化
-		figure(3);			%终点压力变化
-		plot(Pe(1:i));
-		title('Pressure at the Outlet');
-		Qs(1:i) = (1/Den_sta)*Mss(1:i);		%起点流量变化
-		figure(4);
-		plot(Qs(1:i));
-		title('Quantity as the Inlet');
-	end
+	%if mod(i,10) == 0
+	%	%计算过程图形化
+	%	figure(3);			%终点压力变化
+	%	plot(Pe(1:i));
+	%	title('Pressure at the Outlet');
+	%	Qs(1:i) = (Area/Den_sta)*Mss(1:i);		%起点流量变化
+	%	figure(4);
+	%	plot(Qs(1:i));
+	%	title('Quantity as the Inlet');
+	%end
 end
 
 %计算结果可视化
 figure(3);			%终点压力变化
 plot(Pe);
 title('Pressure at the Outlet');
-Qs = (1/Den_sta)*Mss;		%起点流量变化
+Qs = (Area/Den_sta)*Mss;		%起点流量变化
 figure(4);
 plot(Qs);
 title('Quantity as the Inlet');
