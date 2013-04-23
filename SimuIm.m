@@ -27,7 +27,7 @@ Time_Sec = 3600;		%单个时间段时长
 dt = 60;              		%时步
 TimeSteps_Total = Time / dt; 	%总时步数
 TimeSteps_Per_Sec = Time_Sec / dt;		%每个时间段的步长数
-dx = 10E3;               		%空间步长
+dx = 5E3;               		%空间步长
 SpaceSteps = Len / dx;		%空间分段数
 gama = 0.95;			%阻尼系数
 tf_str = '';			%状态转移方程字符串
@@ -71,16 +71,7 @@ Pressure = Pressure';		%压力
 
 %瞬态模拟
 %构造管流控制方程组
-fid = fopen('transfun.m');	%打开状态转移方程文件
-fprintf(fid,'%s','function F = transfun(x,dt,dx,alpha,beta,lamda,Din,Ppre,Mspre,Ps,Mse)\n');
-fprintf(fid,'%s','F = [(alpha*Ps/(1+beta*Ps)+alpha*x(2)/(1+beta*x(2))-alpha*Ppre(1)/(1+beta*Ppre(1))-alpha*Ppre(2)/(1+beta*Ppre(2)))/2/dt + (x(3)+Mspre(2)-x(1)-Mspre(1))/2/dx;\n');
-fprintf(fid,'%s','(x(1)+x(3)-Mspre(1)-Mspre(2))/2/dt + (x(3)^2*(1+beta*x(2))/alpha/x(2)+x(2)+Mspre(2)^2*(1+beta*Ppre(2))/alpha/Ppre(2)+Ppre(2)-x(1)^2*(1+beta*Ps)/alpha/Ps-Ps-Mspre(1)^2*(1+beta*Ppre(1))/alpha/Ppre(1)-Ppre(1))/2/dx + lamda*(x(1)^2*(1+beta*Ps)/alpha/Ps+x(3)^2*(1+beta*x(2))/alpha/x(2)+Mspre(1)^2*(1+beta*Ppre(1))/alpha/Ppre(1)+Mspre(2)^2*(1+beta*Ppre(2))/alpha/Ppre(2))/8/Din;\n');
-for i = 2:SpaceSteps-1
-	fprintf(fid,'%s','(alpha*x(2*i)/(1+beta*x(2*i-2))+alpha*x(2*i)/(1+beta*x(2*i))-alpha*Pressure(i)/(1+beta*Pressure(i))-alpha*Pressure(i+1)/(1+beta*Pressure(i+1)))/2/dt + (x(2*i+1)+MassFlux(i+1)-x(2*i-1)-MassFlux(i))/2/dx;');
-	fprintf(fid,'%s','(x(2*i-1)+x(2*i+1)-MassFlux(i)-MassFlux(i+1))/2/dt + ((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+x(2*i)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+Pressure(i+1)-(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)-x(2*i-2)-(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i)-Pressure(i))/2/dx + lamda*((x(2*i+1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i+1)^2)*(1+beta*Pressure(i+1))/alpha/Pressure(i+1)+(x(2*i-1)^2)*(1+beta*x(2*i-2))/alpha/x(2*i-2)+(MassFlux(i)^2)*(1+beta*Pressure(i))/alpha/Pressure(i))/8/Din')
-end
-fprintf(fid,'%s','(alpha*x(2*SpaceSteps-2)/(1+beta*x(2*SpaceSteps-2))+alpha*x(2*SpaceSteps)/(1+beta*x(2*SpaceSteps))-alpha*Pressure(SpaceSteps)/(1+beta*Pressure(SpaceSteps))-alpha*Pressure(SpaceSteps+1)/(1+Pressure(SpaceSteps+1)))/2/dt + (Mse(1)+MassFlux(SpaceSteps+1)-x(2*SpaceSteps-1)-MassFlux(SpaceSteps))/2/dx;');
-fprintf(fid,'%s','x(2*SpaceSteps-1)+Mse(1)-MassFlux(SpaceSteps)-MassFlux(SpaceSteps+1))/2/dt + ((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+Pressure(SpaceSteps+1)-(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)-x(2*SpaceSteps-2)-(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps)-Pressure(SpaceSteps-1))/2/dx + lamda*((Mse(1)^2)*(1+beta*x(2*SpaceSteps))/alpha/x(2*SpaceSteps)+(MassFlux(SpaceSteps+1)^2)*(1+beta*Pressure(SpaceSteps+1))/alpha/Pressure(SpaceSteps+1)+(x(2*i-1)^2)*(1+beta*x(2*SpaceSteps-2))/alpha/x(2*SpaceSteps-2)+(MassFlux(SpaceSteps)^2)*(1+beta*Pressure(SpaceSteps))/alpha/Pressure(SpaceSteps))/8/Din];');
+creat_transfun(SpaceSteps);
 tic;
 for i = 1:TimeSteps_Total
 	tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps(i),Mse(i));	%构造方程
