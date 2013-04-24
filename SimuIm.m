@@ -24,12 +24,13 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 C0 = 0.03848;           		%稳态模拟公式系数
 Time = 24*3600;		%模拟时长
 Time_Sec = 3600;		%单个时间段时长
+Secs = Time/Time_Sec;	%时间段数目
 dt = 60;              		%时步
 TimeSteps_Total = Time / dt; 	%总时步数
 TimeSteps_Per_Sec = Time_Sec / dt;		%每个时间段的步长数
-dx = 5E3;               		%空间步长
+dx = 10E3;               		%空间步长
 SpaceSteps = Len / dx;		%空间分段数
-gama = 0.95;			%阻尼系数
+gama = 1;			%阻尼系数
 tf_str = '';			%状态转移方程字符串
 
 %边界条件
@@ -41,8 +42,15 @@ Qbasic = 65;           		 		%流量基数
 Ff = [0.2;0.15;0.1;0.25;0.35;0.58;1.2;1.3;1;0.97;0.85;1.65;2;1;0.8;0.65;...
     1.15;1.9;2.8;2.2;1.2;0.85;0.5;0.35];    		%小时流量不均匀系数
 Qe = zeros(TimeSteps_Total,1);         		%终点流量
-for i = 1:Time/Time_Sec 			%根据时间点上的值设定整个时间段的流量
-	Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
+for i = 1:Secs 					%根据时间点上的值设定整个时间段的流量
+	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
+	for j = 1:TimeSteps_Per_Sec
+		if i == 1
+			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(Secs))*j/TimeSteps_Per_Sec + Ff(Secs));
+		else
+			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(i-1))*j/TimeSteps_Per_Sec + Ff(i-1));
+		end
+	end
 end
 Mse = Den_sta * Qe/Area;			%终点质量流量密度
 
