@@ -31,7 +31,6 @@ TimeSteps_Per_Sec = Time_Sec / dt;		%每个时间段的步长数
 dx = 10E3;               		%空间步长
 SpaceSteps = Len / dx;		%空间分段数
 gama = 1;			%阻尼系数
-tf_str = '';			%状态转移方程字符串
 
 %边界条件
 Ps = 7.3E6*ones(TimeSteps_Total,1);		%管段起点压力
@@ -99,7 +98,6 @@ for i = 1:TimeSteps_Total
 		Pressure(j) = results(2*j-2);
 		MassFlux(j) = results(2*j-1);
 	end
-
 	Pressure(SpaceSteps+1) = results(2*SpaceSteps);
 	Mss(i) = results(1);		%管段起点质量流量
 	Pe(i) = results(2*SpaceSteps);	%管段终点压力
