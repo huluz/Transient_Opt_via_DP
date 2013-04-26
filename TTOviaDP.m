@@ -32,7 +32,7 @@ Ff = [0.2;0.15;0.1;0.25;0.35;0.58;1.2;1.3;1;0.97;0.85;1.65;2;1;0.8;0.65;...
 %计算参数
 Time = 24*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 900;			%时步，s
+dt = 1800;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -91,13 +91,16 @@ Pressure_ini = Pressure_ini';		%压力
 %DP算法求解优化问题
 
 %构建DP算法初始状态
-Results_Now = [Pressure_ini',MassFlux_ini',zeros(1,Time_Secs),0];	%设定初始状态
+Results_Now = [Pressure_ini,MassFlux_ini',zeros(1,Time_Secs),0];	%设定初始状态
 Col_Num_Per_Rec = 2*(SpaceSteps + 1) + Time_Secs + 1;		%每个记录所需的行数
 Ms_Rec_Start_Num = SpaceSteps + 2;					%质量流量记录起始位置
 Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
-for i = 1:24
+for i = 1:3
+	disp('=========================================');
+	disp(['Time: ' sprintf('%d',i)]);
+	tic;				%计时
 	%确定决策变量范围
 	tl = Len;			%管段长度
 	Ple = Pe_min;			%起点压力
@@ -174,11 +177,14 @@ for i = 1:24
 					Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = -1;
 					Com_Consum = 0;
 				else
-					Com_Consum = Com_Consum + MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
+					Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
 				end
 			end
+			%归档计算结果
 			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
 				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
+				Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
+				Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
 			end
 		end
 	end
@@ -204,6 +210,14 @@ for i = 1:24
 		end
 		m = m + 1;
 	end
+
+	%计算过程可视化
+	disp(['Total Combinations: ' sprintf('%d',States_Now_Num_Temp)]);
+	disp(['Good Recodes: ' sprintf('%d',Good_Recs)]);
+	disp(['Bad Recodes; ' sprintf('%d',Bad_Recs)]);
+	toc;			%单个时间段计算时间
+	disp('=========================================');
+	disp('');
 end
 
 %筛选最优方案
@@ -217,7 +231,6 @@ for i = 1:Rec_Num
 	end
 end
 Opt_Des = Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
-Opt_Des = (Area/Den_sta)*Opt_Des;		%转换为标况体积流量
 
 %图形化计算结果
 figure(3);
