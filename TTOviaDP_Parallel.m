@@ -130,65 +130,73 @@ for i = 1:2
 
 	%转储上一阶段的计算结果，并准备继续计算所需的内存空间
 	Results_Pre = Results_Now;			%转储上一阶段的计算结果
+	Results_Pre_Pressure = Results_Pre(:,1:Ms_Rec_Start_Num-1);				%压力计算结果
+	Results_Pre_MassFlux = Results_Pre(:,Ms_Rec_Start_Num:Desicision_Rec_Start_Num-1);	%质量流量计算结果
+	Results_Pre_Decision = Results_Pre(Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);	%决策过程
+	Results_Pre_Com_Consum = Results_Pre(:,Col_Num_Per_Rec);				%压缩机能耗
 	States_Pre_Num = size(Results_Pre,1);	%本阶段/上一时步状态数
 	States_Now_Num_Temp = States_Pre_Num*Ps_avai_Num;			%下一阶段/本时步状态数初步估计
 	Results_Now_Temp = zeros(States_Now_Num_Temp,Col_Num_Per_Rec);	%准备计算所需内存空间
+	Results_Now_Temp_Pressure = zeros(States_Now_Num_Temp,Ms_Rec_Start_Num-1);
+	Results_Now_Temp_MassFlux = zeros(States_Now_Num_Temp,Desicision_Rec_Start_Num - Ms_Rec_Start_Num);
+	Results_Now_Temp_Decision = zeros(States_Now_Num_Temp,Col_Num_Per_Rec - Desicision_Rec_Start_Num);
+	Results_Now_Temp_Com_Consum = zeros(States_Now_Num_Temp,1);
 
 	%产生状态与决策变量组合，并进行模拟
-	startmatlabpool
-	for m = 1:States_Pre_Num 	%循环设定状态
-		for n = 1:Ps_avai_Num 	%循环设定决策变量
-			%为方便计算，准备一些参数
-			Rec_Num = (m - 1)*Ps_avai_Num + n;		%当前记录号
-
-			%复制决策过程
-			Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre(m,Desicision_Rec_Start_Num:Col_Num_Per_Rec - 1);
-			Results_Now_Temp(Rec_Num, Desicision_Rec_Start_Num + i - 1) = Ps_avai(n);	%设定决策变量值
-			Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
-			MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
-
-			%模拟过程
-			Ps_Pre = Results_Pre(m,1);	%取出上一时步管段入口处压力
-			Com_Consum = 0;		%压缩机能耗
-			%单个时间段内可能存在多个时步，需要进行多次模拟
-			for l = 1:TimeSteps_Per_Sec
-				Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
-				tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
-				x0 = zeros(2*SpaceSteps,1);	%准备初值
-				x0(1) = MassFlux(1);
-				for j = 2:SpaceSteps
-					x0(2*j-2) = Pressure(j);
-					x0(2*j-1) = MassFlux(j);
-				end
-				x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
-				options = optimset('Display','off');
-				results = fsolve(tf,x0,options);	%计算
-
-				MassFlux(1) = results(1);	%归档计算结果
-				for j = 2:SpaceSteps
-					Pressure(j) = results(2*j-2);
-					MassFlux(j) = results(2*j-1);
-				end
-				Pressure(SpaceSteps+1) = results(2*SpaceSteps);
-				Pressure(1) = Ps_Simu;
-				MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
-
-				%计算压缩机能耗
-				if Pressure(SpaceSteps+1) < Pe_min
-					Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = -1;
-					Com_Consum = 0;
-				else
-					Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
-				end
-			end
-			%归档计算结果
-			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
-				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
-				Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
-				Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
-			end
-		end
-	end
+%	startmatlabpool
+%	parfor m = 1:States_Pre_Num 	%循环设定状态
+%		for n = 1:Ps_avai_Num 	%循环设定决策变量
+%			%为方便计算，准备一些参数
+%			Rec_Num = (m - 1)*Ps_avai_Num + n;		%当前记录号
+%
+%			%复制决策过程
+%			Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre_Decision(m,:);
+%			Results_Now_Temp_Decision(Rec_Num, i) = Ps_avai(n);				%设定决策变量值
+%			Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
+%			MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
+%
+%			%模拟过程
+%			Ps_Pre = Results_Pre(m,1);	%取出上一时步管段入口处压力
+%			Com_Consum = 0;		%压缩机能耗
+%			%单个时间段内可能存在多个时步，需要进行多次模拟
+%			for l = 1:TimeSteps_Per_Sec
+%				Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
+%				tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
+%				x0 = zeros(2*SpaceSteps,1);	%准备初值
+%				x0(1) = MassFlux(1);
+%				for j = 2:SpaceSteps
+%					x0(2*j-2) = Pressure(j);
+%					x0(2*j-1) = MassFlux(j);
+%				end
+%				x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
+%				options = optimset('Display','off');
+%				results = fsolve(tf,x0,options);	%计算
+%
+%				MassFlux(1) = results(1);	%归档计算结果
+%				for j = 2:SpaceSteps
+%					Pressure(j) = results(2*j-2);
+%					MassFlux(j) = results(2*j-1);
+%				end
+%				Pressure(SpaceSteps+1) = results(2*SpaceSteps);
+%				Pressure(1) = Ps_Simu;
+%				MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
+%
+%				%计算压缩机能耗
+%				if Pressure(SpaceSteps+1) < Pe_min
+%					Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = -1;
+%					Com_Consum = 0;
+%				else
+%					Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
+%				end
+%			end
+%			%归档计算结果
+%			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
+%				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
+%				Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
+%				Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
+%			end
+%		end
+%	end
 
 	%剔除不可行方案
 	Bad_Recs = 0;		%统计可行方案数目
