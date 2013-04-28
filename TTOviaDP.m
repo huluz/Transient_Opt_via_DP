@@ -26,13 +26,13 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
 Qbasic = 65;			%基础流量，m^3/s
-Ff = [0.2;0.15;0.1;0.25;0.35;0.58;1.2;1.3;1;0.97;0.85;1.65;2;1;0.8;0.65;...
-	1.15;1.9;2.8;2.2;1.2;0.85;0.5;0.35];	%小时不均匀用气系数
+Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8; 0.65; ...
+	1.15; 1.9; 2.8; 2.2; 1.2; 0.85; 0.5; 0.35];	%小时不均匀用气系数
 
 %计算参数
 Time = 24*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 1800;			%时步，s
+dt = 900;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -92,12 +92,21 @@ Pressure_ini = Pressure_ini';		%压力
 
 %构建DP算法初始状态
 Results_Now = [Pressure_ini,MassFlux_ini',zeros(1,Time_Secs),0];	%设定初始状态
+%Storage = 0;								%管存量
+Volumn_Sec = Area*dx;
+%for ii = 1:SpaceSteps
+%	Pre_Aver = (Pressure_ini(ii) + Pressure_ini(ii+1))/2;
+%	z = 1 + beta*Pre_Aver;
+%	Den_Rel = Pre_Aver/z/R/Temp;
+%	Storage_Sec = Volumn_Sec*Den_Rel;
+%	Storage = Storage + Storage_Sec;
+%end
 Col_Num_Per_Rec = 2*(SpaceSteps + 1) + Time_Secs + 1;		%每个记录所需的行数
 Ms_Rec_Start_Num = SpaceSteps + 2;					%质量流量记录起始位置
 Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
-for i = 1:2
+for i = 1:6
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
 	tic;				%计时
@@ -120,7 +129,7 @@ for i = 1:2
 	end
 	if Ps_avai_Num <= 0
 		sprintf('%s\n','Desicision is Empty!');
-		exit;
+		return;
 	end
 	%Ps_avai_Num
 	Ps_avai = zeros(Ps_avai_Num,1);	%计算决策变量可取值
@@ -133,16 +142,17 @@ for i = 1:2
 	States_Pre_Num = size(Results_Pre,1);	%本阶段/上一时步状态数
 	States_Now_Num_Temp = States_Pre_Num*Ps_avai_Num;			%下一阶段/本时步状态数初步估计
 	Results_Now_Temp = zeros(States_Now_Num_Temp,Col_Num_Per_Rec);	%准备计算所需内存空间
+	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	startmatlabpool
+	%startmatlabpool
 	for m = 1:States_Pre_Num 	%循环设定状态
 		for n = 1:Ps_avai_Num 	%循环设定决策变量
 			%为方便计算，准备一些参数
 			Rec_Num = (m - 1)*Ps_avai_Num + n;		%当前记录号
 
 			%复制决策过程
-			Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre(m,Desicision_Rec_Start_Num:Col_Num_Per_Rec - 1);
+			Results_Now_Temp(Rec_Num, Desicision_Rec_Start_Num:Col_Num_Per_Rec - 1) = Results_Pre(m,Desicision_Rec_Start_Num:Col_Num_Per_Rec - 1);
 			Results_Now_Temp(Rec_Num, Desicision_Rec_Start_Num + i - 1) = Ps_avai(n);	%设定决策变量值
 			Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
 			MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
@@ -184,8 +194,28 @@ for i = 1:2
 			%归档计算结果
 			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
 				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
-				Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
-				Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
+				for ii = 1:SpaceSteps
+					Pre_Aver = (Pressure(ii) + Pressure(ii+1))/2;
+					z = 1 + beta*Pre_Aver;
+					Den_Rel = Pre_Aver/z/R/Temp;
+					Storage_Sec = Volumn_Sec*Den_Rel;
+					Storage(Rec_Num) = Storage(Rec_Num) + Storage_Sec;
+				end
+			end
+			Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
+			Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
+		end
+	end
+
+	%根据管存收缩状态空间
+	Red_States = 0;	%冗余状态数
+	for kk = 1:States_Now_Num_Temp - 1
+		if Results_Now_Temp(kk,Col_Num_Per_Rec) ~= -1
+			for mm = kk+1 : States_Now_Num_Temp
+				if Results_Now_Temp(mm,Col_Num_Per_Rec) ~= -1 && Storage(kk) > Storage(mm) && Results_Now_Temp(kk,Col_Num_Per_Rec) < Results_Now_Temp(mm,Col_Num_Per_Rec)
+					Results_Now_Temp(mm, Col_Num_Per_Rec) = -1;
+					Red_States = Red_States + 1;
+				end
 			end
 		end
 	end
@@ -200,7 +230,7 @@ for i = 1:2
 	Good_Recs = States_Now_Num_Temp - Bad_Recs;
 	if Good_Recs <= 0
 		sprintf('%s\n','No available results!');
-		exit;
+		return;
 	end
 	l = 1;m=1;		%归档可行方案
 	Results_Now = zeros(Good_Recs,Col_Num_Per_Rec);
@@ -216,6 +246,7 @@ for i = 1:2
 	disp(['Total Combinations: ' sprintf('%d',States_Now_Num_Temp)]);
 	disp(['Good Recodes: ' sprintf('%d',Good_Recs)]);
 	disp(['Bad Recodes; ' sprintf('%d',Bad_Recs)]);
+	disp(['Redundancy Recodes: ' sprintf('%d', Red_States)]);
 	toc;			%单个时间段计算时间
 	disp('=========================================');
 	disp('');
@@ -235,7 +266,7 @@ end
 Opt_Des = Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
 
 %图形化计算结果
-figure(3);
-plot(Opt_Des);
-title('Optimum Control Strategy');
-legend('Volumn quantity at the inlet');
+%figure(3);
+%plot(Opt_Des);
+%title('Optimum Control Strategy');
+%legend('Volumn quantity at the inlet');
