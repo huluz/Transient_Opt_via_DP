@@ -26,8 +26,8 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
 Qbasic = 65;			%基础流量，m^3/s
-Ff = [0.2;0.15;0.1;0.25;0.35;0.58;1.2;1.3;1;0.97;0.85;1.65;2;1;0.8;0.65;...
-	1.15;1.9;2.8;2.2;1.2;0.85;0.5;0.35];	%小时不均匀用气系数
+Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8; 0.65; ...
+	1.15; 1.9; 2.8; 2.2; 1.2; 0.85; 0.5; 0.35];	%小时不均匀用气系数
 
 %计算参数
 Time = 24*3600;		%优化时间段，s
@@ -92,12 +92,21 @@ Pressure_ini = Pressure_ini';		%压力
 
 %构建DP算法初始状态
 Results_Now = [Pressure_ini,MassFlux_ini',zeros(1,Time_Secs),0];	%设定初始状态
+%Storage = 0;								%管存量
+Volumn_Sec = Area*dx;
+%for ii = 1:SpaceSteps
+%	Pre_Aver = (Pressure_ini(ii) + Pressure_ini(ii+1))/2;
+%	z = 1 + beta*Pre_Aver;
+%	Den_Rel = Pre_Aver/z/R/Temp;
+%	Storage_Sec = Volumn_Sec*Den_Rel;
+%	Storage = Storage + Storage_Sec;
+%end
 Col_Num_Per_Rec = 2*(SpaceSteps + 1) + Time_Secs + 1;		%每个记录所需的行数
 Ms_Rec_Start_Num = SpaceSteps + 2;					%质量流量记录起始位置
 Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
-for i = 1:2
+for i = 1:6
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
 	tic;				%计时
@@ -120,7 +129,7 @@ for i = 1:2
 	end
 	if Ps_avai_Num <= 0
 		sprintf('%s\n','Desicision is Empty!');
-		exit;
+		return;
 	end
 	%Ps_avai_Num
 	Ps_avai = zeros(Ps_avai_Num,1);	%计算决策变量可取值
@@ -130,73 +139,94 @@ for i = 1:2
 
 	%转储上一阶段的计算结果，并准备继续计算所需的内存空间
 	Results_Pre = Results_Now;			%转储上一阶段的计算结果
-	Results_Pre_Pressure = Results_Pre(:,1:Ms_Rec_Start_Num-1);				%压力计算结果
-	Results_Pre_MassFlux = Results_Pre(:,Ms_Rec_Start_Num:Desicision_Rec_Start_Num-1);	%质量流量计算结果
-	Results_Pre_Decision = Results_Pre(Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);	%决策过程
-	Results_Pre_Com_Consum = Results_Pre(:,Col_Num_Per_Rec);				%压缩机能耗
+%	Results_Pre_Pressure = Results_Pre(:, 1:Ms_Rec_Start_Num - 1);				%拆分记录，压力记录
+%	Results_Pre_MassFlux = Results_Pre(:, Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%质量流量记录
+%	Results_Pre_Decision = Results_Pre(:, Desicision_Rec_Start_Num:Col_Num_Per_Rec - 1);	%决策变量记录
+%	Results_Pre_Com_Consum = Results_Pre(:, Col_Num_Per_Rec);				%压缩机能耗记录
 	States_Pre_Num = size(Results_Pre,1);	%本阶段/上一时步状态数
 	States_Now_Num_Temp = States_Pre_Num*Ps_avai_Num;			%下一阶段/本时步状态数初步估计
 	Results_Now_Temp = zeros(States_Now_Num_Temp,Col_Num_Per_Rec);	%准备计算所需内存空间
-	Results_Now_Temp_Pressure = zeros(States_Now_Num_Temp,Ms_Rec_Start_Num-1);
-	Results_Now_Temp_MassFlux = zeros(States_Now_Num_Temp,Desicision_Rec_Start_Num - Ms_Rec_Start_Num);
-	Results_Now_Temp_Decision = zeros(States_Now_Num_Temp,Col_Num_Per_Rec - Desicision_Rec_Start_Num);
-	Results_Now_Temp_Com_Consum = zeros(States_Now_Num_Temp,1);
+	Results_Now_Temp_Pressure = zeros(States_Now_Num_Temp, Ms_Rec_Start_Num - 1);				%压力记录
+	Results_Now_Temp_MassFlux = zeros(States_Now_Num_Temp, Desicision_Rec_Start_Num - Ms_Rec_Start_Num);	%质量流量记录
+	Results_Now_Temp_Decision = zeros(States_Now_Num_Temp, Col_Num_Per_Rec - Results_Pre_Decision);		%决策过程记录
+	Results_Now_Temp_Decision_TT = zeros(States_Now_Num_Temp,1);
+	Results_Now_Temp_Com_Consum = zeros(States_Now_Num_Temp, 1);						%压缩机能耗记录
+	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-%	startmatlabpool
-%	parfor m = 1:States_Pre_Num 	%循环设定状态
-%		for n = 1:Ps_avai_Num 	%循环设定决策变量
-%			%为方便计算，准备一些参数
-%			Rec_Num = (m - 1)*Ps_avai_Num + n;		%当前记录号
-%
-%			%复制决策过程
-%			Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre_Decision(m,:);
-%			Results_Now_Temp_Decision(Rec_Num, i) = Ps_avai(n);				%设定决策变量值
-%			Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
-%			MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
-%
-%			%模拟过程
-%			Ps_Pre = Results_Pre(m,1);	%取出上一时步管段入口处压力
-%			Com_Consum = 0;		%压缩机能耗
-%			%单个时间段内可能存在多个时步，需要进行多次模拟
-%			for l = 1:TimeSteps_Per_Sec
-%				Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
-%				tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
-%				x0 = zeros(2*SpaceSteps,1);	%准备初值
-%				x0(1) = MassFlux(1);
-%				for j = 2:SpaceSteps
-%					x0(2*j-2) = Pressure(j);
-%					x0(2*j-1) = MassFlux(j);
-%				end
-%				x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
-%				options = optimset('Display','off');
-%				results = fsolve(tf,x0,options);	%计算
-%
-%				MassFlux(1) = results(1);	%归档计算结果
-%				for j = 2:SpaceSteps
-%					Pressure(j) = results(2*j-2);
-%					MassFlux(j) = results(2*j-1);
-%				end
-%				Pressure(SpaceSteps+1) = results(2*SpaceSteps);
-%				Pressure(1) = Ps_Simu;
-%				MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
-%
-%				%计算压缩机能耗
-%				if Pressure(SpaceSteps+1) < Pe_min
-%					Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = -1;
-%					Com_Consum = 0;
-%				else
-%					Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
-%				end
-%			end
-%			%归档计算结果
-%			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
-%				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
-%				Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
-%				Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
-%			end
+	startmatlabpool
+	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
+		%解析循环变量，得到状态与决策变量索引
+		n = mod(Rec_Num, Ps_avai_Num) ;	%决策变量索引
+		m = (Rec_Num - n)/Ps_avai_Num + 1;	%状态索引
+
+		%复制决策过程
+		Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre(m, Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
+		Results_Now_Temp_Decision_TT(Rec_Num, end) = Ps_avai(n);			%设定决策变量值
+		Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
+		MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
+
+		%模拟过程
+		Ps_Pre = Results_Pre(m,1);	%取出上一时步管段入口处压力
+		Com_Consum = 0;		%压缩机能耗
+		%单个时间段内可能存在多个时步，需要进行多次模拟
+		for l = 1:TimeSteps_Per_Sec
+			Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
+			tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
+			x0 = zeros(2*SpaceSteps,1);	%准备初值
+			x0(1) = MassFlux(1);
+			for j = 2:SpaceSteps
+				x0(2*j-2) = Pressure(j);
+				x0(2*j-1) = MassFlux(j);
+			end
+			x0(2*SpaceSteps) = Pressure(SpaceSteps+1);
+			options = optimset('Display','off');
+			results = fsolve(tf,x0,options);	%计算
+
+			MassFlux(1) = results(1);	%归档计算结果
+			for j = 2:SpaceSteps
+				Pressure(j) = results(2*j-2);
+				MassFlux(j) = results(2*j-1);
+			end
+			Pressure(SpaceSteps+1) = results(2*SpaceSteps);
+			Pressure(1) = Ps_Simu;
+			MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
+
+			%计算压缩机能耗
+			if Pressure(SpaceSteps+1) < Pe_min
+				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
+				Com_Consum = 0;
+			else
+				Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
+			end
+		end
+		%归档计算结果
+		if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
+			Results_Now_Temp_Com_Consum(Rec_Num) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
+			for ii = 1:SpaceSteps
+				Pre_Aver = 2*(Pressure(ii) + Pressure(ii + 1)^2/(Pressure(ii) + Pressure(ii + 1)))/3;
+				z = 1 + beta*Pre_Aver;
+				Den_Rel = Pre_Aver/z/R/Temp;
+				Storage_Sec = Volumn_Sec*Den_Rel;
+				Storage(Rec_Num) = Storage(Rec_Num) + Storage_Sec;
+			end
 %		end
-%	end
+%		Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
+%		Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
+	end
+
+	%根据管存收缩状态空间
+	Red_States = 0;	%冗余状态数
+	for kk = 1:States_Now_Num_Temp - 1
+		if Results_Now_Temp(kk,Col_Num_Per_Rec) ~= -1
+			for mm = kk+1 : States_Now_Num_Temp
+				if Results_Now_Temp(mm,Col_Num_Per_Rec) ~= -1 && Storage(kk) > Storage(mm) && Results_Now_Temp(kk,Col_Num_Per_Rec) < Results_Now_Temp(mm,Col_Num_Per_Rec)
+					Results_Now_Temp(mm, Col_Num_Per_Rec) = -1;
+					Red_States = Red_States + 1;
+				end
+			end
+		end
+	end
 
 	%剔除不可行方案
 	Bad_Recs = 0;		%统计可行方案数目
@@ -208,7 +238,7 @@ for i = 1:2
 	Good_Recs = States_Now_Num_Temp - Bad_Recs;
 	if Good_Recs <= 0
 		sprintf('%s\n','No available results!');
-		exit;
+		return;
 	end
 	l = 1;m=1;		%归档可行方案
 	Results_Now = zeros(Good_Recs,Col_Num_Per_Rec);
@@ -224,6 +254,7 @@ for i = 1:2
 	disp(['Total Combinations: ' sprintf('%d',States_Now_Num_Temp)]);
 	disp(['Good Recodes: ' sprintf('%d',Good_Recs)]);
 	disp(['Bad Recodes; ' sprintf('%d',Bad_Recs)]);
+	disp(['Redundancy Recodes: ' sprintf('%d', Red_States)]);
 	toc;			%单个时间段计算时间
 	disp('=========================================');
 	disp('');
@@ -243,7 +274,7 @@ end
 Opt_Des = Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
 
 %图形化计算结果
-figure(3);
-plot(Opt_Des);
-title('Optimum Control Strategy');
-legend('Volumn quantity at the inlet');
+%figure(3);
+%plot(Opt_Des);
+%title('Optimum Control Strategy');
+%legend('Volumn quantity at the inlet');

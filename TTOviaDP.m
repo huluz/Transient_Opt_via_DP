@@ -32,7 +32,7 @@ Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8
 %计算参数
 Time = 24*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 900;			%时步，s
+dt = 60 * 30;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -106,7 +106,7 @@ Ms_Rec_Start_Num = SpaceSteps + 2;					%质量流量记录起始位置
 Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
-for i = 1:6
+for i = 1:24
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
 	tic;				%计时
@@ -162,7 +162,7 @@ for i = 1:6
 			Com_Consum = 0;		%压缩机能耗
 			%单个时间段内可能存在多个时步，需要进行多次模拟
 			for l = 1:TimeSteps_Per_Sec
-				Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/Time_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
+				Ps_Simu = (Ps_avai(n) - Ps_Pre)*l/TimeSteps_Per_Sec + Ps_Pre;	%通过插值方法构建边界条件
 				tf = @(x)transfun(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Ps_Simu,Mse((i-1)*TimeSteps_Per_Sec+l));	%构造方程
 				x0 = zeros(2*SpaceSteps,1);	%准备初值
 				x0(1) = MassFlux(1);
@@ -184,7 +184,8 @@ for i = 1:6
 				MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
 
 				%计算压缩机能耗
-				if Pressure(SpaceSteps+1) < Pe_min
+				%Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
+				if Pressure(SpaceSteps+1) < Pe_min || min(MassFlux) < 0
 					Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = -1;
 					Com_Consum = 0;
 				else
@@ -195,7 +196,7 @@ for i = 1:6
 			if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
 				Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
 				for ii = 1:SpaceSteps
-					Pre_Aver = (Pressure(ii) + Pressure(ii+1))/2;
+					Pre_Aver = 2*(Pressure(ii) + Pressure(ii + 1)^2/(Pressure(ii) + Pressure(ii + 1)))/3;
 					z = 1 + beta*Pre_Aver;
 					Den_Rel = Pre_Aver/z/R/Temp;
 					Storage_Sec = Volumn_Sec*Den_Rel;
@@ -229,7 +230,7 @@ for i = 1:6
 	end
 	Good_Recs = States_Now_Num_Temp - Bad_Recs;
 	if Good_Recs <= 0
-		sprintf('%s\n','No available results!');
+		disp('%s\n','No available results!');
 		return;
 	end
 	l = 1;m=1;		%归档可行方案
