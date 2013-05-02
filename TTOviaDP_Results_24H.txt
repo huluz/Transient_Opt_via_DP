@@ -1,0 +1,192 @@
+=========================================
+Time: 1
+Total Combinations: 14
+Good Recodes: 14
+Bad Recodes; 0
+Redundancy Recodes: 0
+Elapsed time is 5.865905 seconds.
+=========================================
+=========================================
+Time: 2
+Total Combinations: 196
+Good Recodes: 49
+Bad Recodes; 147
+Redundancy Recodes: 59
+Elapsed time is 72.552794 seconds.
+=========================================
+=========================================
+Time: 3
+Total Combinations: 686
+Good Recodes: 150
+Bad Recodes; 536
+Redundancy Recodes: 178
+Elapsed time is 314.686767 seconds.
+=========================================
+=========================================
+Time: 4
+Total Combinations: 2100
+Good Recodes: 367
+Bad Recodes; 1733
+Redundancy Recodes: 450
+Elapsed time is 1028.431698 seconds.
+=========================================
+=========================================
+Time: 5
+Total Combinations: 5138
+Good Recodes: 600
+Bad Recodes; 4538
+Redundancy Recodes: 1095
+Elapsed time is 2810.182715 seconds.
+=========================================
+=========================================
+Time: 6
+Total Combinations: 8400
+Good Recodes: 969
+Bad Recodes; 7431
+Redundancy Recodes: 1560
+Elapsed time is 4264.566464 seconds.
+=========================================
+=========================================
+Time: 7
+Total Combinations: 10659
+Good Recodes: 1497
+Bad Recodes; 9162
+Redundancy Recodes: 2569
+Elapsed time is 4839.789938 seconds.
+=========================================
+=========================================
+Time: 8
+Total Combinations: 16467
+Good Recodes: 851
+Bad Recodes; 15616
+Redundancy Recodes: 5838
+Elapsed time is 7289.867580 seconds.
+=========================================
+=========================================
+Time: 9
+Total Combinations: 10212
+Good Recodes: 952
+Bad Recodes; 9260
+Redundancy Recodes: 3719
+Elapsed time is 4297.717019 seconds.
+=========================================
+=========================================
+Time: 10
+Total Combinations: 11424
+Good Recodes: 1111
+Bad Recodes; 10313
+Redundancy Recodes: 4053
+Elapsed time is 4957.842841 seconds.
+=========================================
+=========================================
+Time: 11
+Total Combinations: 14443
+Good Recodes: 1385
+Bad Recodes; 13058
+Redundancy Recodes: 4209
+Elapsed time is 6649.928478 seconds.
+=========================================
+=========================================
+Time: 12
+Total Combinations: 12465
+Good Recodes: 1397
+Bad Recodes; 11068
+Redundancy Recodes: 6577
+Elapsed time is 4250.356430 seconds.
+=========================================
+=========================================
+Time: 13
+Total Combinations: 9779
+Good Recodes: 969
+Bad Recodes; 8810
+Redundancy Recodes: 7082
+Elapsed time is 2445.062632 seconds.
+=========================================
+=========================================
+Time: 14
+Total Combinations: 11628
+Good Recodes: 1535
+Bad Recodes; 10093
+Redundancy Recodes: 4614
+Elapsed time is 4465.221036 seconds.
+=========================================
+=========================================
+Time: 15
+Total Combinations: 19955
+Good Recodes: 1918
+Bad Recodes; 18037
+Redundancy Recodes: 5872
+Elapsed time is 9017.309646 seconds.
+=========================================
+=========================================
+Time: 16
+Total Combinations: 26852
+Good Recodes: 2451
+Bad Recodes; 24401
+Redundancy Recodes: 6826
+Elapsed time is 12917.458692 seconds.
+=========================================
+=========================================
+Time: 17
+Total Combinations: 29412
+Good Recodes: 3192
+Bad Recodes; 26220
+Redundancy Recodes: 9732
+Elapsed time is 12719.945055 seconds.
+=========================================
+=========================================
+Time: 18
+Total Combinations: 22344
+Good Recodes: 2119
+Bad Recodes; 20225
+Redundancy Recodes: 14940
+Elapsed time is 6209.567751 seconds.
+=========================================
+=========================================
+Time: 19
+Total Combinations: 2119
+Good Recodes: 1148
+Bad Recodes; 971
+Redundancy Recodes: 339
+Elapsed time is 321.389320 seconds.
+=========================================
+=========================================
+Time: 20
+Total Combinations: 5740
+Good Recodes: 1490
+Bad Recodes; 4250
+Redundancy Recodes: 4216
+Elapsed time is 1048.974018 seconds.
+=========================================
+=========================================
+Time: 21
+Total Combinations: 16390
+Good Recodes: 2622
+Bad Recodes; 13768
+Redundancy Recodes: 6179
+Elapsed time is 5598.950736 seconds.
+=========================================
+=========================================
+Time: 22
+Total Combinations: 34086
+Good Recodes: 2460
+Bad Recodes; 31626
+Redundancy Recodes: 7785
+Elapsed time is 15692.427666 seconds.
+=========================================
+=========================================
+Time: 23
+Total Combinations: 34440
+Good Recodes: 1946
+Bad Recodes; 32494
+Redundancy Recodes: 5812
+Elapsed time is 17412.229124 seconds.
+=========================================
+=========================================
+Time: 24
+Total Combinations: 27244
+Good Recodes: 2489
+Bad Recodes; 24755
+Redundancy Recodes: 4309
+Elapsed time is 13880.324988 seconds.
+=========================================
