@@ -106,7 +106,7 @@ Ms_Rec_Start_Num = SpaceSteps + 2;					%质量流量记录起始位置
 Desicision_Rec_Start_Num = 2*(SpaceSteps + 1) + 1;			%决策序列记录起始问题
 
 %顺序递推过程
-for i = 1:6
+for i = 1:5
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
 	tic;				%计时
@@ -148,21 +148,26 @@ for i = 1:6
 	Results_Now_Temp = zeros(States_Now_Num_Temp,Col_Num_Per_Rec);	%准备计算所需内存空间
 	Results_Now_Temp_Pressure = zeros(States_Now_Num_Temp, Ms_Rec_Start_Num - 1);				%压力记录
 	Results_Now_Temp_MassFlux = zeros(States_Now_Num_Temp, Desicision_Rec_Start_Num - Ms_Rec_Start_Num);	%质量流量记录
-	Results_Now_Temp_Decision = zeros(States_Now_Num_Temp, Col_Num_Per_Rec - Results_Pre_Decision);		%决策过程记录
+	Results_Now_Temp_Decision = zeros(States_Now_Num_Temp, Col_Num_Per_Rec - Desicision_Rec_Start_Num);	%决策过程记录
 	Results_Now_Temp_Decision_TT = zeros(States_Now_Num_Temp,1);
 	Results_Now_Temp_Com_Consum = zeros(States_Now_Num_Temp, 1);						%压缩机能耗记录
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	startmatlabpool
+	startmatlabpool;
 	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Ps_avai_Num) ;	%决策变量索引
-		m = (Rec_Num - n)/Ps_avai_Num + 1;	%状态索引
+		if n == 0 
+			n = Ps_avai_Num;
+			m = Rec_Num/Ps_avai_Num;
+		else
+			m = (Rec_Num - n)/Ps_avai_Num + 1;	%状态索引
+		end
 
 		%复制决策过程
 		Results_Now_Temp_Decision(Rec_Num, :) = Results_Pre(m, Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
-		Results_Now_Temp_Decision_TT(Rec_Num, end) = Ps_avai(n);			%设定决策变量值
+		Results_Now_Temp_Decision_TT(Rec_Num) = Ps_avai(n);			%设定决策变量值
 		Pressure = Results_Pre(m,1:Ms_Rec_Start_Num - 1);					%设定压力初始值，准备模拟
 		MassFlux = Results_Pre(m,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1);	%设定质量流量初始值
 
@@ -201,7 +206,7 @@ for i = 1:6
 			end
 		end
 		%归档计算结果
-		if Results_Now_Temp(Rec_Num, Col_Num_Per_Rec) ~= -1
+		if Results_Now_Temp_Com_Consum(Rec_Num) ~= -1
 			Results_Now_Temp_Com_Consum(Rec_Num) = Results_Pre(m,Col_Num_Per_Rec) + Com_Consum;
 			for ii = 1:SpaceSteps
 				Pre_Aver = 2*(Pressure(ii) + Pressure(ii + 1)^2/(Pressure(ii) + Pressure(ii + 1)))/3;
@@ -210,9 +215,18 @@ for i = 1:6
 				Storage_Sec = Volumn_Sec*Den_Rel;
 				Storage(Rec_Num) = Storage(Rec_Num) + Storage_Sec;
 			end
-%		end
-%		Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Pressure;
-%		Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = MassFlux;
+		end
+		Results_Now_Temp_Pressure(Rec_Num,:) = Pressure;
+		Results_Now_Temp_MassFlux(Rec_Num,:) = MassFlux;
+	end
+
+	%整理计算结果
+	for Rec_Num = 1:States_Now_Num_Temp
+		Results_Now_Temp(Rec_Num,1:Ms_Rec_Start_Num - 1) = Results_Now_Temp_Pressure(Rec_Num,:);				%压力记录
+		Results_Now_Temp(Rec_Num,Ms_Rec_Start_Num:Desicision_Rec_Start_Num - 1) = Results_Now_Temp_MassFlux(Rec_Num,:);	%质量流量记录
+		Results_Now_Temp_Decision(Rec_Num,i) = Results_Now_Temp_Decision_TT(Rec_Num);						%决策过程记录
+		Results_Now_Temp(Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1) = Results_Now_Temp_Decision(Rec_Num,:);
+		Results_Now_Temp(Rec_Num,Col_Num_Per_Rec) = Results_Now_Temp_Com_Consum(Rec_Num);					%能耗记录
 	end
 
 	%根据管存收缩状态空间

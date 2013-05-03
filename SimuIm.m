@@ -33,7 +33,17 @@ SpaceSteps = Len / dx;		%空间分段数
 gama = 1;			%阻尼系数
 
 %边界条件
-Ps = 7.3E6*ones(TimeSteps_Total,1);		%管段起点压力
+Ps_TimeStepEnd = 1e6 * [5.7; 5.9; 6.1; 6.5; 6.5; 6.5; 6.5; 6.3; 6.3; 6.1; 6.5; 6.5; 6.3; 5.9; 6.3; 6.7; 6.7; 6.9; 7.3; 6.5; 5.9; 5.9; 5.9; 6.1];
+Ps = zeros(TimeSteps_Total,1);
+for i = 1:Secs 					%根据时间点上的值设定整个时间段的管段起点压力
+	for j = 1:TimeSteps_Per_Sec
+		if i == 1
+			Ps(TimeSteps_Per_Sec*(i-1)+j) = (Ps_TimeStepEnd(i)-5.5e6)*j/TimeSteps_Per_Sec + 5.5e6;
+		else
+			Ps(TimeSteps_Per_Sec*(i-1)+j) = (Ps_TimeStepEnd(i)-Ps_TimeStepEnd(i-1))*j/TimeSteps_Per_Sec + Ps_TimeStepEnd(i-1);
+		end
+	end
+end
 Qs = zeros(TimeSteps_Total,1);		%起点流量
 Mss = zeros(TimeSteps_Total,1);		%起点质量流量密度
 Pe = zeros(TimeSteps_Total,1);		%终点压力
@@ -55,7 +65,7 @@ Mse = Den_sta * Qe/Area;			%终点质量流量密度
 
 %稳态模拟
 tl = Len;               		%管段长度
-Pls = Ps(1);            		%起点压力
+Pls = 5.5e6;            		%起点压力
 i = 1;
 Pressure(i) = Pls;		%沿线压力记录
 while tl>0              		%稳态模拟
