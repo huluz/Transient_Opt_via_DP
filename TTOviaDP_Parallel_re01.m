@@ -32,7 +32,7 @@ Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8
 %计算参数
 Time = 24*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 1800;			%时步，s
+dt = 30 * 15;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -42,7 +42,7 @@ SpaceSteps = Len / dx;		%空间分段数
 creat_transfun_re01(SpaceSteps);		%创建状态转移方程
 Qs_Min = 5;			%管段进口流量范围, Nm^3/s
 Qs_Max = 185;
-dq = 5;				%流量离散步长, Nm^3/s
+dq = 20;				%流量离散步长, Nm^3/s
 
 %模拟参数
 C0 = 0.03848;			%稳态模拟公式参数
@@ -185,7 +185,8 @@ for i = 1:24
 			%计算压缩机能耗
 			if Pressure(SpaceSteps+1) < Pe_min || min(MassFlux) < 0
 				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
-				Com_Consum = 0;
+				break;
+%				Com_Consum = 0;
 			else
 				Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
 			end
@@ -215,17 +216,17 @@ for i = 1:24
 	end
 
 	%根据管存收缩状态空间
-%	Red_States = 0;	%冗余状态数
-%	for kk = 1:States_Now_Num_Temp - 1
-%		if Results_Now_Temp(kk,Col_Num_Per_Rec) ~= -1
-%			for mm = kk+1 : States_Now_Num_Temp
-%				if Results_Now_Temp(mm,Col_Num_Per_Rec) ~= -1 && Storage(kk) > Storage(mm) && Results_Now_Temp(kk,Col_Num_Per_Rec) < Results_Now_Temp(mm,Col_Num_Per_Rec)
-%					Results_Now_Temp(mm, Col_Num_Per_Rec) = -1;
-%					Red_States = Red_States + 1;
-%				end
-%			end
-%		end
-%	end
+	Red_States = 0;	%冗余状态数
+	for kk = 1:States_Now_Num_Temp - 1
+		if Results_Now_Temp(kk,Col_Num_Per_Rec) ~= -1
+			for mm = kk+1 : States_Now_Num_Temp
+				if Results_Now_Temp(mm,Col_Num_Per_Rec) ~= -1 && Storage(kk) > Storage(mm) && Results_Now_Temp(kk,Col_Num_Per_Rec) < Results_Now_Temp(mm,Col_Num_Per_Rec)
+					Results_Now_Temp(mm, Col_Num_Per_Rec) = -1;
+					Red_States = Red_States + 1;
+				end
+			end
+		end
+	end
 
 	%剔除不可行方案
 	Bad_Recs = 0;		%统计可行方案数目
@@ -252,8 +253,8 @@ for i = 1:24
 	%计算过程可视化
 	disp(['Total Combinations: ' sprintf('%d',States_Now_Num_Temp)]);
 	disp(['Good Recodes: ' sprintf('%d',Good_Recs)]);
-	disp(['Bad Recodes; ' sprintf('%d',Bad_Recs)]);
-%	disp(['Redundancy Recodes: ' sprintf('%d', Red_States)]);
+	disp(['Bad Recodes: ' sprintf('%d',Bad_Recs)]);
+	disp(['Redundancy Recodes: ' sprintf('%d', Red_States)]);
 	toc;			%单个时间段计算时间
 	disp('=========================================');
 	disp('');

@@ -24,7 +24,7 @@ C0 = 0.03848;           		%稳态模拟公式系数
 Time = 24*3600;		%模拟时长
 Time_Sec = 3600;		%单个时间段时长
 Secs = Time/Time_Sec;	%时间段数目
-dt = 60;              		%时步
+dt = 60 * 15;              		%时步
 TimeSteps_Total = Time / dt; 	%总时步数
 TimeSteps_Per_Sec = Time_Sec / dt;		%每个时间段的步长数
 dx = 10E3;               		%空间步长
@@ -36,7 +36,18 @@ gama = 1;			%阻尼系数
 %边界条件
 Storage = zeros(TimeSteps_Total,1);		%管存量
 Qbasic = 65;           		 		%流量基数
-Qs = Qbasic*ones(TimeSteps_Total,1);		%起点流量
+Qs_Opt = [25; 5; 5; 5; 45; 45; 105; 65; 45; 85; 85; 125; 125; 5; 85; 85; 125; 145; 145; 65; 45; 65; 5; 25];	%起点流量
+Qs = zeros(TimeSteps_Total,1);
+for ii = 1:Secs 					%根据时间点上的值设定整个时间段的流量
+	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
+	for j = 1:TimeSteps_Per_Sec
+		if ii == 1
+			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(Secs))*j/TimeSteps_Per_Sec + Qs_Opt(Secs);
+		else
+			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(ii-1))*j/TimeSteps_Per_Sec + Qs_Opt(ii-1);
+		end
+	end
+end
 Mss = (Den_sta/Area)*Qs;			%起点质量流量密度
 Ps = zeros(TimeSteps_Total,1);		%起点压力
 Pe = zeros(TimeSteps_Total,1);		%终点压力
