@@ -121,7 +121,7 @@ for i = 1:TimeSteps_Total
 		MassFlux(j) = results(2*j-1);
 	end
 	Pressure(SpaceSteps+1) = results(2*SpaceSteps);
-	Ps(i) = results(1);		%管段起点质量流量
+	Ps(i) = results(1);		%管段起点压力
 	Pe(i) = results(2*SpaceSteps);	%管段终点压力
 	if i < TimeSteps_Total
 		MassFlux(1) = Mss(i+1);	%引入边界条件
