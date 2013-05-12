@@ -26,7 +26,7 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
 Qbasic = 33;			%基础流量，m^3/s
-Ff = [1; 1; 1.5; 1.5];	%小时不均匀用气系数
+Ff = [1.5; 1.5; 1; 1];	%小时不均匀用气系数
 
 %计算参数
 Time = 4*3600;		%优化时间段，s
@@ -40,7 +40,7 @@ dx = 10E3;			%空间步长，m
 SpaceSteps = Len / dx;		%空间分段数
 creat_transfun_re01(SpaceSteps);		%创建状态转移方程
 Qs_Min = 30;			%管段进口流量范围, Nm^3/s
-Qs_Max = 50;
+Qs_Max = 55;
 dq = 5;				%流量离散步长, Nm^3/s
 
 %模拟参数
@@ -69,7 +69,7 @@ Mse = Den_sta * Qe/Area;	%终点质量流量密度
 %DP算法初始化-设置初始状态
 %稳态模拟
 tl = Len;			%管段长度
-Ple = Pe_min;			%起点压力
+Ple = Pe_min + 0.2;			%起点压力
 Pressure_ini(SpaceSteps+1) = Ple;%沿线压力记录
 i = SpaceSteps;
 while tl>0 			%稳态模拟
@@ -116,7 +116,7 @@ end
 Qs_avai = (Den_sta/Area)*Qs_avai;			%转换单位
 
 %顺序递推过程
-for i = 1:24
+for i = 1:Time_Secs
 	startmatlabpool;
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
@@ -139,7 +139,7 @@ for i = 1:24
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
+	for Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Qs_avai_Num) ;	%决策变量索引
 		if n == 0 
