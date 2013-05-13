@@ -26,7 +26,7 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
 Qbasic = 33;			%基础流量，m^3/s
-Ff = [1.5; 1.5; 1; 1];	%小时不均匀用气系数
+Ff = [1.0; 1.0; 1.5; 1.5];	%小时不均匀用气系数
 
 %计算参数
 Time = 4*3600;		%优化时间段，s
@@ -139,7 +139,7 @@ for i = 1:Time_Secs
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	for Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
+	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Qs_avai_Num) ;	%决策变量索引
 		if n == 0 

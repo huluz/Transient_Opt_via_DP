@@ -21,7 +21,7 @@ Len = 100E3;            		%管段长度
 lamda = 0.008;          		%摩阻系数
 Din = 0.6096;           		%管段内径
 C0 = 0.03848;           		%稳态模拟公式系数
-Time = 4*3600;		%模拟时长
+Time = 3*3600;		%模拟时长
 Time_Sec = 3600;		%单个时间段时长
 Secs = Time/Time_Sec;	%时间段数目
 dt = 60 * 10;              		%时步
@@ -36,31 +36,25 @@ gama = 1;			%阻尼系数
 %边界条件
 Storage = zeros(TimeSteps_Total,1);		%管存量
 Qbasic = 33;           		 		%流量基数
-Qs_Opt = [30; 45; 50; 30];	%起点流量
-Qs = zeros(TimeSteps_Total,1);
+Qs_Opt = [30; 40; 55; 30];	%起点流量
+Qs = zeros(TimeSteps_Total + 1,1);
+Qs(1) = Qs_Opt(1);
 for ii = 1:Secs 					%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 	for j = 1:TimeSteps_Per_Sec
-		if ii == 1
-			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(Secs))*j/TimeSteps_Per_Sec + Qs_Opt(Secs);
-		else
-			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(ii-1))*j/TimeSteps_Per_Sec + Qs_Opt(ii-1);
-		end
+		Qs(TimeSteps_Per_Sec*(ii-1)+j + 1) = (Qs_Opt(ii+1)-Qs_Opt(ii))*j/TimeSteps_Per_Sec + Qs_Opt(ii);
 	end
 end
 Mss = (Den_sta/Area)*Qs;			%起点质量流量密度
 Ps = zeros(TimeSteps_Total,1);		%起点压力
 Pe = zeros(TimeSteps_Total,1);		%终点压力
 Ff = [1; 1; 1.5; 1.5];    		%小时流量不均匀系数
-Qe = zeros(TimeSteps_Total,1);         		%终点流量
+Qe = zeros(TimeSteps_Total + 1,1);         		%终点流量
+Qe(1) = Ff(1)*Qbasic;
 for i = 1:Secs 					%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 	for j = 1:TimeSteps_Per_Sec
-		if i == 1
-			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(Secs))*j/TimeSteps_Per_Sec + Ff(Secs));
-		else
-			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(i-1))*j/TimeSteps_Per_Sec + Ff(i-1));
-		end
+		Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i+1)-Ff(i))*j/TimeSteps_Per_Sec + Ff(i));
 	end
 end
 Mse = Den_sta * Qe/Area;			%终点质量流量密度
@@ -72,7 +66,7 @@ i = SpaceSteps + 1;
 Pressure(i) = Ple;		%沿线压力记录
 while tl>0              		%稳态模拟
     z = 1 + beta*Ple;   		%压缩因子
-    Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(TimeSteps_Total)^2/C0^2/Din^5;
+    Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(1)^2/C0^2/Din^5;
     Pls = Pls^0.5;
     i = i-1;
     Pressure(i) = Pls;
@@ -89,7 +83,10 @@ for ii = 1:SpaceSteps
 	Storage_Sec = Volumn_Sec*Den_Rel;
 	Storage_Total = Storage_Total + Storage_Sec;
 end
-disp(['Initial Total Storage: ' sprintf('%d',Storage_Total)]);
+Ps(1) = Pressure(1);
+Pe(1) = Pressure(SpaceSteps+1);
+Storage(1) = Storage_Total;
+%disp(['Initial Total Storage: ' sprintf('%d',Storage_Total)]);
 %figure(1);
 %plot(Pressure);
 %title('Pressure');
@@ -101,7 +98,7 @@ disp(['Initial Total Storage: ' sprintf('%d',Storage_Total)]);
 %构造管流控制方程组
 creat_transfun_re01(SpaceSteps);
 tic;
-for i = 1:TimeSteps_Total
+for i = 2:TimeSteps_Total+1
 	tf = @(x)transfun_re01(x,dt,dx,alpha,beta,lamda,Din,Pressure,MassFlux,Mss(i),Mse(i));	%构造方程
 	x0 = zeros(2*SpaceSteps,1);	%准备初值
 	x0(1) = Pressure(1);
