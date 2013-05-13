@@ -29,7 +29,7 @@ Qbasic = 33;			%基础流量，m^3/s
 Ff = [1.0; 1.0; 1.5; 1.5];	%小时不均匀用气系数
 
 %计算参数
-Time = 4*3600;		%优化时间段，s
+Time = 3*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
 dt = 60 * 10;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
@@ -54,14 +54,11 @@ MassFlux_ini = zeros(SpaceSteps+1,1);	%沿线质量流量分布
 
 %边界条件
 Qe = zeros(TimeSteps_Total,1);		%终点流量
+Qe(1) = Ff(1)*Qbasic;
 for i = 1:Time_Secs			%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 	for j = 1:TimeSteps_Per_Sec
-		if i == 1
-			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(Time_Secs))*j/TimeSteps_Per_Sec + Ff(Time_Secs));
-		else
-			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(i-1))*j/TimeSteps_Per_Sec + Ff(i-1));
-		end
+		Qe(TimeSteps_Per_Sec*(i-1)+j+1) = Qbasic*((Ff(i+1)-Ff(i))*j/TimeSteps_Per_Sec + Ff(i));
 	end
 end
 Mse = Den_sta * Qe/Area;	%终点质量流量密度
@@ -69,12 +66,12 @@ Mse = Den_sta * Qe/Area;	%终点质量流量密度
 %DP算法初始化-设置初始状态
 %稳态模拟
 tl = Len;			%管段长度
-Ple = Pe_min + 0.2;			%起点压力
+Ple = Pe_min;			%起点压力
 Pressure_ini(SpaceSteps+1) = Ple;%沿线压力记录
 i = SpaceSteps;
 while tl>0 			%稳态模拟
 	z = 1 + beta*Ple;	%压缩因子
-	Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(TimeSteps_Total)^2/C0^2/Din^5;
+	Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(1)^2/C0^2/Din^5;
 	Pls = Pls^0.5;
 	Pressure_ini(i) = Pls;
 	i = i - 1;
@@ -116,7 +113,7 @@ end
 Qs_avai = (Den_sta/Area)*Qs_avai;			%转换单位
 
 %顺序递推过程
-for i = 1:Time_Secs
+for i = 2:Time_Secs+1
 	startmatlabpool;
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
