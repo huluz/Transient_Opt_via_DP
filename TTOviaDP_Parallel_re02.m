@@ -25,14 +25,13 @@ Din = 0.6096;			%管内径，m
 Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
-Qbasic = 65;			%基础流量，m^3/s
-Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8; 0.65; ...
-	1.15; 1.9; 2.8; 2.2; 1.2; 0.85; 0.5; 0.35];	%小时不均匀用气系数
+Qbasic = 33;			%基础流量，m^3/s
+Ff = [1.5; 1.5; 1; 1];	%小时不均匀用气系数
 
 %计算参数
-Time = 24*3600;		%优化时间段，s
+Time = 4*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 30 * 15;			%时步，s
+dt = 60 * 10;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -40,9 +39,9 @@ dp = 0.2E6;			%状态变量空间离散步长
 dx = 10E3;			%空间步长，m
 SpaceSteps = Len / dx;		%空间分段数
 creat_transfun_re01(SpaceSteps);		%创建状态转移方程
-Qs_Min = 5;			%管段进口流量范围, Nm^3/s
-Qs_Max = 185;
-dq = 20;				%流量离散步长, Nm^3/s
+Qs_Min = 30;			%管段进口流量范围, Nm^3/s
+Qs_Max = 55;
+dq = 5;				%流量离散步长, Nm^3/s
 
 %模拟参数
 C0 = 0.03848;			%稳态模拟公式参数
@@ -70,7 +69,7 @@ Mse = Den_sta * Qe/Area;	%终点质量流量密度
 %DP算法初始化-设置初始状态
 %稳态模拟
 tl = Len;			%管段长度
-Ple = Pe_min;			%起点压力
+Ple = Pe_min + 0.2;			%起点压力
 Pressure_ini(SpaceSteps+1) = Ple;%沿线压力记录
 i = SpaceSteps;
 while tl>0 			%稳态模拟
@@ -117,7 +116,7 @@ end
 Qs_avai = (Den_sta/Area)*Qs_avai;			%转换单位
 
 %顺序递推过程
-for i = 1:24
+for i = 1:Time_Secs
 	startmatlabpool;
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
@@ -140,7 +139,7 @@ for i = 1:24
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
-	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
+	for Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Qs_avai_Num) ;	%决策变量索引
 		if n == 0 
@@ -183,7 +182,7 @@ for i = 1:24
 			MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
 
 			%计算压缩机能耗
-			if Pressure(SpaceSteps+1) < Pe_min || min(MassFlux) < 0
+			if Pressure(SpaceSteps+1) < Pe_min %|| min(MassFlux) < 0
 				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
 				break;
 %				Com_Consum = 0;

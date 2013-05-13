@@ -36,13 +36,13 @@ gama = 1;			%阻尼系数
 %边界条件
 Storage = zeros(TimeSteps_Total,1);		%管存量
 Qbasic = 33;           		 		%流量基数
-Qs_Opt = [80; 100; 80; 60];	%起点流量
+Qs_Opt = [30; 45; 50; 30];	%起点流量
 Qs = zeros(TimeSteps_Total,1);
 for ii = 1:Secs 					%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 	for j = 1:TimeSteps_Per_Sec
 		if ii == 1
-			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-0.95*Qs_Opt(ii))*j/TimeSteps_Per_Sec + Qs_Opt(ii);
+			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(Secs))*j/TimeSteps_Per_Sec + Qs_Opt(Secs);
 		else
 			Qs(TimeSteps_Per_Sec*(ii-1)+j) = (Qs_Opt(ii)-Qs_Opt(ii-1))*j/TimeSteps_Per_Sec + Qs_Opt(ii-1);
 		end
@@ -51,7 +51,7 @@ end
 Mss = (Den_sta/Area)*Qs;			%起点质量流量密度
 Ps = zeros(TimeSteps_Total,1);		%起点压力
 Pe = zeros(TimeSteps_Total,1);		%终点压力
-Ff = [1.0; 1.5; 1.5; 1.0];    		%小时流量不均匀系数
+Ff = [1; 1; 1.5; 1.5];    		%小时流量不均匀系数
 Qe = zeros(TimeSteps_Total,1);         		%终点流量
 for i = 1:Secs 					%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
@@ -67,12 +67,12 @@ Mse = Den_sta * Qe/Area;			%终点质量流量密度
 
 %稳态模拟
 tl = Len;               		%管段长度
-Ple = 4.5e6;            		%起点压力
+Ple = 4.5e6 + 0.2e6;            		%起点压力
 i = SpaceSteps + 1;
 Pressure(i) = Ple;		%沿线压力记录
 while tl>0              		%稳态模拟
     z = 1 + beta*Ple;   		%压缩因子
-    Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*0.95*Qe(1)^2/C0^2/Din^5;
+    Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(TimeSteps_Total)^2/C0^2/Din^5;
     Pls = Pls^0.5;
     i = i-1;
     Pressure(i) = Pls;
