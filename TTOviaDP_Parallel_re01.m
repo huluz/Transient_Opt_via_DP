@@ -1,7 +1,10 @@
+function TTOviaDP_Parallel_re01(Ff, Time, FN, Qs_Min, Qs_Max, dq)
 % 采用DP算法求解输气管道末段非稳态优化问题
-
-% 代码初始化
-clc;clear;
+%Ff - 小时不均匀用气系数
+%Time - 优化时间段，s
+%FN - 计算结果存储文件
+%Qs_Max, Qs_Min - 管段进口流量范围, Nm^3/s
+%dq - 流量离散步长, Nm^3/s
 
 %气体相关参数
 mol = 17.44;			%相对分子质量
@@ -26,13 +29,10 @@ Area = 0.25*pi*Din^2;		%管段横截面积
 Pe_min = 4.5E6;		%管段出口允许最低压力
 Ps_max = 7.3E6;		%管段进口允许最高压力
 Qbasic = 65;			%基础流量，m^3/s
-Ff = [0.2; 0.15; 0.1; 0.25; 0.35; 0.58; 1.2; 1.3; 1; 0.97; 0.85; 1.65; 2; 1; 0.8; 0.65; ...
-	1.15; 1.9; 2.8; 2.2; 1.2; 0.85; 0.5; 0.35];	%小时不均匀用气系数
 
 %计算参数
-Time = 24*3600;		%优化时间段，s
 Time_Per_Sec = 3600;		%流量边界条件设定时步，s
-dt = 30 * 15;			%时步，s
+dt = 60 * 10;			%时步，s
 Time_Secs = Time / Time_Per_Sec;	%时间段数
 TimeSteps_Total = Time / dt;	%总时步数
 TimeSteps_Per_Sec = Time_Per_Sec / dt;	%每个时间段包含的时步数
@@ -40,9 +40,6 @@ dp = 0.2E6;			%状态变量空间离散步长
 dx = 10E3;			%空间步长，m
 SpaceSteps = Len / dx;		%空间分段数
 creat_transfun_re01(SpaceSteps);		%创建状态转移方程
-Qs_Min = 5;			%管段进口流量范围, Nm^3/s
-Qs_Max = 185;
-dq = 20;				%流量离散步长, Nm^3/s
 
 %模拟参数
 C0 = 0.03848;			%稳态模拟公式参数
@@ -59,7 +56,7 @@ for i = 1:Time_Secs			%根据时间点上的值设定整个时间段的流量
 	%Qe(TimeSteps_Per_Sec*(i-1)+1:TimeSteps_Per_Sec*i) = Qbasic*Ff(i)*ones(TimeSteps_Per_Sec,1);
 	for j = 1:TimeSteps_Per_Sec
 		if i == 1
-			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(Time_Secs))*j/TimeSteps_Per_Sec + Ff(Time_Secs));
+			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-0.95*Ff(i))*j/TimeSteps_Per_Sec + Ff(i));
 		else
 			Qe(TimeSteps_Per_Sec*(i-1)+j) = Qbasic*((Ff(i)-Ff(i-1))*j/TimeSteps_Per_Sec + Ff(i-1));
 		end
@@ -75,7 +72,7 @@ Pressure_ini(SpaceSteps+1) = Ple;%沿线压力记录
 i = SpaceSteps;
 while tl>0 			%稳态模拟
 	z = 1 + beta*Ple;	%压缩因子
-	Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*Qe(TimeSteps_Total)^2/C0^2/Din^5;
+	Pls = Ple^2 + lamda*z*Rel_Den*Temp*dx*0.95*Qe(1)^2/C0^2/Din^5;
 	Pls = Pls^0.5;
 	Pressure_ini(i) = Pls;
 	i = i - 1;
@@ -117,7 +114,7 @@ end
 Qs_avai = (Den_sta/Area)*Qs_avai;			%转换单位
 
 %顺序递推过程
-for i = 1:24
+for i = 1:Time_Secs
 	startmatlabpool;
 	disp('=========================================');
 	disp(['Time: ' sprintf('%d',i)]);
@@ -183,12 +180,18 @@ for i = 1:24
 			MassFlux(SpaceSteps+1) = Mse((i-1)*TimeSteps_Per_Sec+l);
 
 			%计算压缩机能耗
-			if Pressure(SpaceSteps+1) < Pe_min || min(MassFlux) < 0
+			if Pressure(SpaceSteps+1) < Pe_min - 0.2e6% || min(MassFlux) < 0
+%				Rec_Num
+%				Results_Now_Temp_Decision_TT(Rec_Num)
+%				Pressure
+%				Pressure(SpaceSteps+1)
 				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
 				break;
 %				Com_Consum = 0;
 			else
-				Com_Consum = Com_Consum + dt*MassFlux(1)*Area*(Pressure(1)/Pin)^0.8;
+				Quan_Temp = (0.328*Area/Den_sta)*MassFlux(1);
+				Sec_Com_Consum = dt*Quan_Temp*(2.682*(Pressure(1)/Pin)^0.217 - 2.658);	%该时步压缩机功率
+				Com_Consum = Com_Consum + Sec_Com_Consum;
 			end
 		end
 		%归档计算结果
@@ -271,10 +274,14 @@ end
 %	end
 %end
 [Min_Obj, Opt_Rec_Num] = min(Results_Now(:,Col_Num_Per_Rec));
-Opt_Des = Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
+Opt_Des = Area/Den_sta*Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_Per_Rec-1);
 
 %图形化计算结果
 %figure(3);
 %plot(Opt_Des);
 %title('Optimum Control Strategy');
 %legend('Volumn quantity at the inlet');
+
+%存储计算结果
+save(FN);
+clc;clear;	%清理计算结果
