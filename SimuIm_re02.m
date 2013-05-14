@@ -1,6 +1,8 @@
 %采用隐式算法进行非稳态模拟
 
 clc;clear;
+load ('Slow_Ramping_24H_Results', 'Time', 'Ff', 'Opt_Des');
+Qs_Opt = Opt_Des';
 
 %气体参数
 mol = 17.44;            		%气体分子质量
@@ -21,7 +23,6 @@ Len = 100E3;            		%管段长度
 lamda = 0.008;          		%摩阻系数
 Din = 0.6096;           		%管段内径
 C0 = 0.03848;           		%稳态模拟公式系数
-Time = 4*3600;			%模拟时长
 Time_Sec = 3600;		%单个时间段时长
 Secs = Time/Time_Sec;	%时间段数目
 dt = 60 * 10;              		%时步
@@ -36,7 +37,6 @@ gama = 1;			%阻尼系数
 %边界条件
 Storage = zeros(TimeSteps_Total,1);		%管存量
 Qbasic = 65;           		 		%流量基数
-Qs_Opt = [65; 90; 100; 100; 70];			%起点流量
 Qs = zeros(TimeSteps_Total + 1,1);		%根据时间点处的流量插值计算其它时步点上的流量
 Qs(1) = Qs_Opt(1);				%初始点与初始时间点重合
 for ii = 1:Secs 					%根据时间点上的值设定整个时间段的流量
@@ -48,7 +48,6 @@ end
 Mss = (Den_sta/Area)*Qs;			%起点质量流量密度
 Ps = zeros(TimeSteps_Total + 1,1);		%起点压力
 Pe = zeros(TimeSteps_Total + 1,1);		%终点压力
-Ff = [1; 1; 1.5; 1.5; 1.5];    			%小时流量不均匀系数
 Qe = zeros(TimeSteps_Total + 1,1);         	%终点流量
 Qe(1) = Ff(1)*Qbasic;
 for i = 1:Secs 					%根据时间点上的值设定整个时间段的流量

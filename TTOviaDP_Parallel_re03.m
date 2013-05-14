@@ -121,6 +121,7 @@ for i = 2:Time_Secs+1
 	Storage = zeros(States_Now_Num_Temp,1);	%管存量
 
 	%产生状态与决策变量组合，并进行模拟
+	Time_Sec = i;	%辅助变量
 	parfor Rec_Num = 1:States_Now_Num_Temp 		%按照估算状态数进行循环
 		%解析循环变量，得到状态与决策变量索引
 		n = mod(Rec_Num, Qs_avai_Num) ;		%决策变量索引
@@ -164,16 +165,25 @@ for i = 2:Time_Secs+1
 			MassFlux(SpaceSteps+1) = Mse((i-2)*TimeSteps_Per_Sec+l+1);
 
 			%计算压缩机能耗
-			if Pressure(SpaceSteps+1) < Pe_min - 0.1e6 && i == 2 					%初始时放宽一些约束条件
-				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
-				break;
-			elseif  Pressure(SpaceSteps + 1) < Pe_min 						%后续过程收紧约束条件
-				Results_Now_Temp_Com_Consum(Rec_Num) = -1;
-				break;
+
+			if Time_Sec == 2
+				if Pressure(SpaceSteps + 1) < Pe_min - 0.1e6 						%对初始时步放宽一些条件
+					Results_Now_Temp_Com_Consum(Rec_Num) = -1;
+					break;
+				else
+					Quan_Temp = (0.328*Area/Den_sta)*MassFlux(1);
+					Sec_Com_Consum = dt*Quan_Temp*(2.682*(Pressure(1)/Pin)^0.217 - 2.658);	%该时步压缩机功率
+					Com_Consum = Com_Consum + Sec_Com_Consum;
+				end
 			else
-				Quan_Temp = (0.328*Area/Den_sta)*MassFlux(1);
-				Sec_Com_Consum = dt*Quan_Temp*(2.682*(Pressure(1)/Pin)^0.217 - 2.658);	%该时步压缩机功率
-				Com_Consum = Com_Consum + Sec_Com_Consum;
+				if Pressure(SpaceSteps + 1) < Pe_min
+					Results_Now_Temp_Com_Consum(Rec_Num) = -1;
+					break;
+				else
+					Quan_Temp = (0.328*Area/Den_sta)*MassFlux(1);
+					Sec_Com_Consum = dt*Quan_Temp*(2.682*(Pressure(1)/Pin)^0.217 - 2.658);	%该时步压缩机功率
+					Com_Consum = Com_Consum + Sec_Com_Consum;
+				end
 			end
 		end
 		%归档计算结果
