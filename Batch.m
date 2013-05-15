@@ -16,3 +16,7 @@ TTOviaDP_Parallel_re03(ff,time,dt,qsmin,qsmax,dq,qbasic,fn);
 %长时间缓波动情况
 load Slow_Ramping_24H_InitialData;
 TTOviaDP_Parallel_re03(ff,time,dt,qsmin,qsmax,dq,qbasic,fn);
+
+%长时间剧烈波动情况
+load Severe_Ramping_24H_InitialData;
+TTOviaDP_Parallel_re03(ff,time,dt,qsmin,qsmax,dq,qbasic,fn);

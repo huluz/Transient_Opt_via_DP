@@ -1,7 +1,8 @@
-%采用隐式算法进行非稳态模拟
+function SimuIm_re03(fn)
+	%fn - 存储有进行模拟计算边界条件的数据文件
 
-clc;clear;
-load ('Ramping_Results', 'Time', 'Ff', 'Opt_Des', 'Qbasic');	%由计算结果载入模拟所需边界条件
+%采用隐式算法进行非稳态模拟
+load (fn, 'Time', 'Ff', 'Opt_Des', 'Qbasic');	%由计算结果载入模拟所需边界条件
 Qs_Opt = [Ff(1)*Qbasic;Opt_Des'];
 
 %气体参数
@@ -155,3 +156,6 @@ title('Pressure at the Inlet');
 figure(5);			%管存量
 plot(Storage);
 title('Storage of the Pipeleg');
+
+%存储计算结果
+save SimuIm_re03_Results;

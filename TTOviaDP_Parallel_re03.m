@@ -48,6 +48,14 @@ C0 = 0.03848;			%稳态模拟公式参数
 Pressure_ini = zeros(SpaceSteps+1,1);		%沿线压力分布
 MassFlux_ini = zeros(SpaceSteps+1,1);	%沿线质量流量分布
 
+%算法记录参数
+Total_Elapsed_Time = 0;				%总运行时间
+Elapsed_Time_Per_Period = zeros(Time_Secs, 1);	%每个阶段的运行时间
+Total_Combinations = zeros(Time_Secs, 1);		%每个阶段的总组合数
+Good_Combinations = zeros(Time_Secs, 1);		%良好组合数
+Bad_Combinations = zeros(Time_Secs ,1);		%被舍弃组合数
+Redundant_Combinations = zeros(Time_Secs, 1);	%冗余记录数
+
 %优化计算参数
 
 %边界条件
