@@ -253,12 +253,19 @@ for i = 2:Time_Secs+1
 		m = m + 1;
 	end
 
+	%记录算法参数
+	Total_Combinations(i - 1) = States_Now_Num_Temp;
+	Good_Combinations(i - 1) = Good_Recs;
+	Bad_Combinations(i - 1) = Bad_Recs;
+	Redundant_Combinations(i - 1) = Red_States;
+	Elapsed_Time_Per_Period(i - 1) = toc;
+
 	%计算过程可视化
 	disp(['Total Combinations: ' sprintf('%d',States_Now_Num_Temp)]);
 	disp(['Good Recodes: ' sprintf('%d',Good_Recs)]);
 	disp(['Bad Recodes: ' sprintf('%d',Bad_Recs)]);
 	disp(['Redundancy Recodes: ' sprintf('%d', Red_States)]);
-	toc;			%单个时间段计算时间
+	disp(['Elapsed Time: ' sprintf('%f', Elapsed_Time_Per_Period(i - 1))]);;			%单个时间段计算时间
 	disp('=========================================');
 	disp('');
 end
@@ -282,4 +289,5 @@ Opt_Des = Area/Den_sta*Results_Now(Opt_Rec_Num,Desicision_Rec_Start_Num:Col_Num_
 %title('Optimum Control Strategy');
 %legend('Volumn quantity at the inlet');
 
+Total_Elapsed_Time = sum(Elapsed_Time_Per_Period);
 save(FN);

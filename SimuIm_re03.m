@@ -2,7 +2,7 @@ function SimuIm_re03(fn)
 	%fn - 存储有进行模拟计算边界条件的数据文件
 
 %采用隐式算法进行非稳态模拟
-load (fn, 'Time', 'Ff', 'Opt_Des', 'Qbasic');	%由计算结果载入模拟所需边界条件
+load (fn, 'Time', 'Ff', 'Opt_Des', 'Qbasic','Pin');	%由计算结果载入模拟所需边界条件
 Qs_Opt = [Ff(1)*Qbasic;Opt_Des'];
 
 %气体参数
@@ -94,6 +94,8 @@ Storage(1) = Storage_Total;
 %title('MassFlux');
 
 %瞬态模拟
+%能耗计算
+Total_Com_Consum = 0;
 %构造管流控制方程组
 creat_transfun_re01(SpaceSteps);
 tic;
@@ -117,7 +119,7 @@ for i = 2:TimeSteps_Total+1
 	Pressure(SpaceSteps+1) = results(2*SpaceSteps);
 	Ps(i) = results(1);			%管段起点压力
 	Pe(i) = results(2*SpaceSteps);		%管段终点压力
-	if i < TimeSteps_Total
+	if i < TimeSteps_Total+1
 		MassFlux(1) = Mss(i+1);	%引入边界条件
 		MassFlux(SpaceSteps+1) = Mse(i+1);
 	end
@@ -130,6 +132,9 @@ for i = 2:TimeSteps_Total+1
 		Storage_Total = Storage_Total + Storage_Sec;
 	end
 	Storage(i) = Storage_Total;
+	Quan_Temp = (0.328*Area/Den_sta)*MassFlux(1);	%计算压缩机能耗
+	Sec_Com_Consum = dt*Quan_Temp*(2.682*(Pressure(1)/Pin)^0.217 - 2.658);			%该时步压缩机功率
+	Total_Com_Consum = Total_Com_Consum + Sec_Com_Consum
 	if mod(i,10) == 0
 		%计算过程图形化
 		figure(3);			%终点压力变化
